@@ -12,7 +12,7 @@ from kivy import Config
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.properties import NumericProperty, ListProperty
-from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 import filetype
@@ -30,7 +30,7 @@ class Rig(App):
 
     def build(self):
         self.image = Image(allow_stretch=True)
-        self.label = Label()
+        self.label = Label(outline_width=2, pos=(0, 0), size_hint=(0.1, 0.1))
         self.reload_image()
 
         self._keyboard = Window.request_keyboard(self._keyboard_close, self.image)
@@ -39,7 +39,7 @@ class Rig(App):
         Config.set("input", "mouse", "mouse,multitouch_on_demand")
         Window.bind(on_touch_down=self.on_touch_down)
 
-        layout = AnchorLayout(anchor_x="right", anchor_y="bottom")
+        layout = FloatLayout()
         layout.add_widget(self.image)
         layout.add_widget(self.label)
         return layout
@@ -47,7 +47,7 @@ class Rig(App):
     def reload_image(self):
         path = self.images[self.index]
         self.image.source = path
-        self.label.text = path
+        self.label.text = os.path.basename(path)
 
     def next(self):
         self.index = 0 if self.index == len(self.images) - 1 else self.index + 1
@@ -68,8 +68,6 @@ class Rig(App):
         if isinstance(keycode, tuple):
             keycode = keycode[1]
 
-        print(keycode)
-
         if keycode == "f":
             Window.fullscreen = False if Window.fullscreen else "auto"
         if keycode == "spacebar" or keycode == "right":
@@ -78,10 +76,11 @@ class Rig(App):
             self.prev()
 
     def on_touch_down(self, window, touch):
-        if touch.button == "right":
-            self.next()
-        elif touch.button == "left":
-            self.prev()
+        if hasattr(touch, "button"):
+            if touch.button == "right":
+                self.next()
+            elif touch.button == "left":
+                self.prev()
         return True
 
 
