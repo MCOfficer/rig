@@ -30,7 +30,7 @@ class Rig(App):
 
     def build(self):
         self.image = Image(allow_stretch=True)
-        self.label = Label(outline_width=2, pos=(0, 0), size_hint=(0.1, 0.1))
+        self.label = Label(outline_width=2, pos=(0, 0), size_hint=(0.3, 0.05))
         self.reload_image()
 
         self._keyboard = Window.request_keyboard(self._keyboard_close, self.image)
@@ -74,6 +74,8 @@ class Rig(App):
             self.next()
         if keycode == "left":
             self.prev()
+        if keycode == "q":
+            exit()
 
     def on_touch_down(self, window, touch):
         if hasattr(touch, "button"):
