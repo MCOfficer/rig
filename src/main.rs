@@ -83,8 +83,8 @@ fn gui(images: Vec<PathBuf>) {
     wind.handle(move |wind, event| match event {
         enums::Event::Push => {
             match app::event_button() {
-                1 => load_image(&images, &index, &mut image_frame, false),
-                3 => load_image(&images, &index, &mut image_frame, true),
+                1 => load_image(&images, &index, &mut image_frame, true),
+                3 => load_image(&images, &index, &mut image_frame, false),
                 _ => {}
             };
             true
