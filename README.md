@@ -2,14 +2,15 @@
 
 A quick & dirty image gallery with the ability to deep-search folders.
 
-### Usage
+### Self-compiling
 
-- Install the requirements
-  - if `kivy` won't install via pip, refer to https://kivy.org/#download
+- [Get Rust](https://www.rust-lang.org/tools/install)
 - Clone/Download rig
-- Run it: `python3 rig.py folder/with/images/ some_other_image.png another/folder/`
+- Build it: `cargo build --release`
+- Find the binary in `target/release`
+- Run it with `rig /path/to/folder /path/to/image.jpg ...`
 - Hotkeys:
   - `left`, `mouse1`: Previous image
-  - `right`, `mouse2`, `space`: Next image
+  - `right`, `mouse2`: Next image
   - `f`: Toggle Fullscreen
-  - `q`, `esc`: Close the program
+  - `q`: Quit

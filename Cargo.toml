@@ -1,0 +1,17 @@
+[package]
+name = "rig"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+argh = "0.1"
+fltk = { version = "^1.2", features = ["fltk-bundled"] }
+infer = "0.5"
+image = "0.23"
+log = "0.4"
+new_mime_guess = "3.0"
+rayon = "1.5"
+simplelog = "0.10"
+walkdir = "2"
+
