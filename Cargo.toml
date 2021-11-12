@@ -13,6 +13,5 @@ jwalk = "0.6"
 log = "0.4"
 new_mime_guess = "3.0"
 parking_lot = "0.11"
-rayon = "1.5"
 simplelog = "0.10"
 

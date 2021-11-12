@@ -553,7 +553,6 @@ dependencies = [
  "log",
  "new_mime_guess",
  "parking_lot",
- "rayon",
  "simplelog",
 ]
 
