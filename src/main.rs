@@ -1,13 +1,17 @@
+mod image_file;
+
 use std::env::current_dir;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
+use crate::image_file::ImageFile;
 use anyhow::Result;
 use argh::FromArgs;
 use fltk::enums::Event;
 use image::RgbImage;
 use log::{error, info};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
 use walkdir::WalkDir;
 
@@ -41,12 +45,20 @@ fn main() {
     gui(images);
 }
 
-fn gui(images: Vec<PathBuf>) {
+fn gui(paths: Vec<PathBuf>) {
     use fltk::prelude::*;
     use fltk::*;
 
-    let images = Arc::new(images);
+    let image_vec: Vec<ImageFile> = paths.into_iter().map(|p| p.into()).collect();
+    let images = Arc::new(image_vec);
+    let images_clone = images.clone();
     let index = AtomicUsize::new(images.len() - 1); // We start at the end of the list, so we can move 1 forward to out actual startign point (0)
+
+    let (preload_sender, preload_receiver) = std::sync::mpsc::sync_channel(16);
+    std::thread::spawn(move || loop {
+        let index: usize = preload_receiver.recv().unwrap();
+        images_clone.get(index).unwrap().preload();
+    });
 
     let app = app::App::default().with_scheme(app::Scheme::Plastic);
     let mut wind = window::Window::default()
@@ -56,7 +68,13 @@ fn gui(images: Vec<PathBuf>) {
     wind.make_resizable(true);
 
     let mut image_frame = frame::Frame::default();
-    load_image(&images, &index, &mut image_frame, false);
+    load_image(
+        &images,
+        &index,
+        &mut image_frame,
+        false,
+        preload_sender.clone(),
+    );
     image_frame.handle(|f, event| {
         if let Event::Resize = event {
             let image = f.image().unwrap();
@@ -83,17 +101,41 @@ fn gui(images: Vec<PathBuf>) {
     wind.handle(move |wind, event| match event {
         enums::Event::Push => {
             match app::event_button() {
-                1 => load_image(&images, &index, &mut image_frame, true),
-                3 => load_image(&images, &index, &mut image_frame, false),
+                1 => load_image(
+                    &images,
+                    &index,
+                    &mut image_frame,
+                    true,
+                    preload_sender.clone(),
+                ),
+                3 => load_image(
+                    &images,
+                    &index,
+                    &mut image_frame,
+                    false,
+                    preload_sender.clone(),
+                ),
                 _ => {}
             };
             true
         }
         enums::Event::KeyDown => {
             if app::event_key() == enums::Key::Right {
-                load_image(&images, &index, &mut image_frame, false);
+                load_image(
+                    &images,
+                    &index,
+                    &mut image_frame,
+                    false,
+                    preload_sender.clone(),
+                );
             } else if app::event_key() == enums::Key::Left {
-                load_image(&images, &index, &mut image_frame, true);
+                load_image(
+                    &images,
+                    &index,
+                    &mut image_frame,
+                    true,
+                    preload_sender.clone(),
+                );
             } else if app::event_key() == enums::Key::from_char('f') {
                 wind.fullscreen(!wind.fullscreen_active());
             } else if app::event_key() == enums::Key::from_char('q') {
@@ -107,36 +149,49 @@ fn gui(images: Vec<PathBuf>) {
     app.run().unwrap();
 }
 
-fn move_index(images: &[PathBuf], atomic: &AtomicUsize, prev: bool) {
+fn move_index(
+    images: &[ImageFile],
+    atomic: &AtomicUsize,
+    prev: bool,
+    preload_sender: SyncSender<usize>,
+) {
     let index = atomic.load(Ordering::SeqCst);
-    let new = if prev && index > 0 {
-        index - 1
-    } else if prev && index == 0 {
-        images.len() - 1
-    } else if index == images.len() - 1 {
-        0
-    } else {
-        index + 1
-    };
+    let new = get_index_at(if prev { -1 } else { 1 }, images, index);
+    info!("Shifting position from {} to {}", index, new);
 
     atomic.store(new, Ordering::SeqCst);
+
+    for i in -5..6 {
+        preload_sender.send(get_index_at(i, images, new)).unwrap();
+    }
 }
 
-fn load_image<F>(images: &[PathBuf], atomic: &AtomicUsize, frame: &mut F, prev: bool)
-where
+fn get_index_at(offset: i64, images: &[ImageFile], current: usize) -> usize {
+    let new = current as i64 + offset;
+    if new < 0 {
+        (images.len() as i64 + new) as usize
+    } else if new >= images.len() as i64 {
+        new as usize - (images.len() - 1)
+    } else {
+        new as usize
+    }
+}
+
+fn load_image<'a, F>(
+    images: &'a [ImageFile],
+    atomic: &AtomicUsize,
+    frame: &mut F,
+    prev: bool,
+    preload_sender: SyncSender<usize>,
+) where
     F: fltk::prelude::WidgetExt,
 {
     let rgb = loop {
-        move_index(images, atomic, prev);
+        move_index(images, atomic, prev, preload_sender.clone());
         let index = atomic.load(Ordering::SeqCst);
-        let path = images.get(index).unwrap();
-        match try_load_raw(path) {
-            Ok(result) => {
-                break result;
-            }
-            Err(e) => {
-                error!("Failed to load {}: {}", path.to_string_lossy(), e)
-            }
+        let file = images.get(index).unwrap();
+        if let Some(result) = file.load() {
+            break result;
         }
     };
 
@@ -154,11 +209,6 @@ where
     let mut wind = frame.window().unwrap();
     wind.resize(wind.x(), wind.y(), wind.w(), wind.h());
     wind.redraw();
-}
-
-fn try_load_raw(path: &Path) -> Result<RgbImage> {
-    let dynamic = image::open(path)?;
-    Ok(dynamic.into_rgb8())
 }
 
 fn compute_dimensions(
