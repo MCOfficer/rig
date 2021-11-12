@@ -8,12 +8,11 @@ use crate::image_file::ImageFile;
 use anyhow::Result;
 use argh::FromArgs;
 use fltk::enums::Event;
-use image::RgbImage;
+use jwalk::WalkDir;
 use log::{error, info};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
-use walkdir::WalkDir;
 
 fn setup_logger() {
     use simplelog::*;
@@ -262,7 +261,7 @@ fn find_images(input_paths: Vec<PathBuf>) -> Vec<PathBuf> {
                 match res {
                     Ok(entry) => {
                         if entry.file_type().is_file() {
-                            files.push(entry.into_path())
+                            files.push(entry.path())
                         }
                     }
                     Err(e) => error!("Failed to read directory {}: {}", path.to_string_lossy(), e),

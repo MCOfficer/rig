@@ -9,10 +9,10 @@ argh = "0.1"
 fltk = { version = "^1.2", features = ["fltk-bundled"] }
 infer = "0.5"
 image = "0.23"
+jwalk = "0.6"
 log = "0.4"
 new_mime_guess = "3.0"
 parking_lot = "0.11"
 rayon = "1.5"
 simplelog = "0.10"
-walkdir = "2"
 
