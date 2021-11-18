@@ -295,6 +295,8 @@ fn find_images(input_paths: Vec<PathBuf>) -> Vec<PathBuf> {
         }
     }
 
+    images.sort_unstable();
+
     info!("Found {} images", images.len());
     images
 }
